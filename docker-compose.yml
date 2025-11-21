@@ -10,6 +10,34 @@ services:
       - "5433:5432"
     volumes:
       - order_postgres_data:/var/lib/postgresql/data
+    networks:
+      - order-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d order_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: .
+    container_name: order-service
+    depends_on:
+      order-db:
+        condition: service_healthy
+    environment:
+      - SERVER_PORT=8081
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://order-db:5432/order_db
+      - SPRING_DATASOURCE_USERNAME=admin
+      - SPRING_DATASOURCE_PASSWORD=admin
+      - INTEGRATION_PAYMENT_SERVICE_URL=http://host.docker.internal:8080
+    ports:
+      - "8081:8081"
+    networks:
+      - order-network
 
 volumes:
   order_postgres_data:
+
+networks:
+  order-network:
+    driver: bridge
